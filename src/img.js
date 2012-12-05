@@ -7,34 +7,36 @@ jQuery.ajaxPrefilter( "img", function( s ) {
 });
 
 jQuery.ajaxTransport( "img", function( s ) {
-	var callback, $img, img, widthProp;
+	var callback;
 	return {
 		send: function( _, complete ) {
+			var image, widthProp;
 			callback = function( success ) {
+				var img = image;
+				callback = widthProp = image = image.onload = image.onerror = null;
 				if ( success != null ) {
 					if ( success ) {
 						complete( 200, "OK", { img: img } );
 					} else {
 						complete( 404, "Not Found" );
 					}
+				} else {
+					img.src = null;
 				}
-
-				if ( $img ) {
-					$img.remove();
-				}
-				$img = img = callback = widthProp = null;
 			};
+			image = document.createElement('img');
+			widthProp = typeof image.naturalWidth === "undefined" ? "width" : "naturalWidth";
 
-			$img = jQuery( "<img>", { src: s.url } );
-			img = $img[ 0 ];
-			widthProp = typeof img.naturalWidth === "undefined" ? "width" : "naturalWidth";
+			image.onload = function() {
+				callback( true );
+			};
+			image.onerror = function() {
+				callback( false );
+			};
+			image.src = s.url;
 
-			if ( img.complete ) {
-				callback( !!img[ widthProp ] );
-			} else {
-				$img.bind( "load error", function( event )  {
-					callback( event.type === "load" );
-				});
+			if ( image.complete ) {
+				callback( !!image[ widthProp ] );
 			}
 		},
 		abort: function() {
